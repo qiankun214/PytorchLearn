@@ -24,3 +24,39 @@ class NormLinear(pt.nn.Module):
 
     def forward(self, x):
         return self.norm(self.fc(x))
+
+
+class ContinuousConv2d(pt.nn.Module):
+
+    def __init__(self, channel_list, kernel_list, padding_list=None, stride_list=None,
+                 conv=pt.nn.Conv2d, afunc=pt.nn.ReLU, **other):
+        super(ContinuousConv2d, self).__init__()
+        if padding_list is None:
+            padding_list = [int(x // 2) for x in kernel_list]
+        if stride_list is None:
+            stride_list = [1 for _ in range(len(kernel_list))]
+        conv_list = []
+        for i in range(len(channel_list) - 1):
+            conv_list.append(conv(
+                channel_list[i], channel_list[i + 1], kernel_list[i],
+                stride=stride_list[i], padding=padding_list[i], **other))
+            conv_list.append(afunc())
+        self.conv = pt.nn.Sequential(*conv_list[:-1])
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class ContinuousLinear(pt.nn.Module):
+
+    def __init__(self, feature_list, bias=True, linear=pt.nn.Linear, afunc=pt.nn.ReLU, **other):
+        super(ContinuousLinear, self).__init__()
+        linear_list = []
+        for i in range(len(feature_list) - 1):
+            linear_list.append(linear(
+                feature_list[i], feature_list[i + 1], bias=bias, **other))
+            linear_list.append(afunc())
+        self.fc = pt.nn.Sequential(*linear_list[:-1])
+
+    def forward(self, x):
+        return self.fc(x)
